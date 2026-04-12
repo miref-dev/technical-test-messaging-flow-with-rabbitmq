@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672" # AMQP
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-service:
+    build: ./api-service
+    container_name: api-service
+    restart: unless-stopped
+    command: npm run start:dev
+    volumes:
+      - ./api-service:/app
+      - /app/node_modules
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-app}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+      WEBHOOK_VERIFY_TOKEN: messageflow-dev-token
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker-service:
+    build: ./worker-service
+    container_name: worker-service
+    restart: unless-stopped
+    command: bun run dev
+    volumes:
+      - ./worker-service:/app
+      - /app/node_modules
+    ports:
+      - "3002:3002"
+    environment:
+      API_BASE_URL: http://api-service:3001/api
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      api-service:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    restart: unless-stopped
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-service
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
