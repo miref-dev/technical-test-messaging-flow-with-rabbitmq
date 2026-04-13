@@ -19,9 +19,3 @@ export const ListMessagesSchema = z.object({
 
 export type ListMessagesQuery = z.infer<typeof ListMessagesSchema>;
 
-export const WebhookStatusSchema = z.object({
-  messageId: z.string(),
-  status: z.enum(['queued', 'processing', 'sent', 'delivered', 'read', 'failed']),
-  timestamp: z.string().optional(),
-  errorReason: z.string().optional(),
-});

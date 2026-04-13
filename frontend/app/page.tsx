@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -15,6 +16,7 @@ interface Message {
 const API_BASE_URL = 'http://localhost:3001/api';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -179,7 +181,11 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {messages.map((msg) => (
-                  <tr key={msg.id} className="hover:bg-white/2 transition-colors group">
+                  <tr 
+                    key={msg.id} 
+                    onClick={() => router.push(`/${msg.id}`)}
+                    className="hover:bg-white/2 transition-colors group cursor-pointer"
+                  >
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-slate-200">{msg.sender}</span>
@@ -204,7 +210,10 @@ export default function DashboardPage() {
                         </span>
                         {(msg.status === 'failed' || msg.status === "queued") && (
                           <button
-                            onClick={() => handleResend(msg.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResend(msg.id);
+                            }}
                             className="text-[10px] bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 px-2 py-0.5 rounded border border-rose-500/30 transition-all uppercase font-bold cursor-pointer"
                           >
                             Retry
