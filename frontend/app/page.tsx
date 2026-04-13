@@ -2,16 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface Message {
-  id: string;
-  sender: string;
-  receiver: string;
-  message: string;
-  attempts: number;
-  status: 'queued' | 'processing' | 'sent' | 'delivered' | 'read' | 'failed';
-  createdAt: string;
-}
+import { Message } from '@/lib/types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -87,9 +78,16 @@ export default function DashboardPage() {
     }
   };
 
+  const statusStyles: Record<string, string> = {
+    read: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    processing: 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse',
+    sent: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    queued: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  }
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 p-8 space-y-12">
-      {/* Header */}
       <div className="max-w-6xl mx-auto flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-bold bg-linear-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
@@ -105,11 +103,14 @@ export default function DashboardPage() {
             <span className="text-sm font-medium text-slate-400">Delivered:</span>
             <span className="ml-2 text-emerald-400 font-bold">{stats?.delivered || 0}</span>
           </div>
+          <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-lg border border-slate-700 shadow-xl">
+            <span className="text-sm font-medium text-slate-400">Read:</span>
+            <span className="ml-2 text-cyan-400 font-bold">{stats?.read || 0}</span>
+          </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Send Message Form */}
         <div className="lg:col-span-4 bg-slate-800/40 backdrop-blur-xl p-8 rounded-2xl border border-white/5 shadow-2xl sticky top-8">
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
@@ -159,7 +160,6 @@ export default function DashboardPage() {
           </form>
         </div>
 
-        {/* Message List */}
         <div className="lg:col-span-8 bg-slate-800/20 backdrop-blur-sm rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
           <div className="p-6 border-b border-white/5 flex justify-between items-center bg-slate-800/30">
             <h2 className="text-xl font-semibold">Live Feed</h2>
@@ -181,8 +181,8 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {messages.map((msg) => (
-                  <tr 
-                    key={msg.id} 
+                  <tr
+                    key={msg.id}
                     onClick={() => router.push(`/${msg.id}`)}
                     className="hover:bg-white/2 transition-colors group cursor-pointer"
                   >
@@ -199,16 +199,10 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${msg.status === 'read' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' :
-                          msg.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            msg.status === 'processing' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse' :
-                              msg.status === 'sent' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
-                                msg.status === 'queued' ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' :
-                                  'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          }`}>
+                        <span className={`inline-flex items-center uppercase px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[msg.status]}`}>
                           {msg.status}
                         </span>
-                        {(msg.status === 'failed' || msg.status === "queued") && (
+                        {msg.status === 'failed' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

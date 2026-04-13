@@ -55,11 +55,9 @@ export async function startWorker() {
       }
 
       console.log(`[worker] Processing message ${messageId}`);
-
+      await randomDelay(1000, 6000);
       await updateStatus(messageId, 'processing');
-
       await randomDelay(2000, 6000);
-
       await updateStatus(messageId, 'sent');
       await randomDelay(4000, 8000);
 
